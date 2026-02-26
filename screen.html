@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html class="light" lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Emergency Call Center Operator Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0ea5e9", // Sky 500
+                        "background-light": "#f8fafc",
+                        "background-dark": "#0f172a",
+                        "status-active": "#22c55e",
+                        "status-break": "#3b82f6",
+                        "status-training": "#f59e0b",
+                        "status-inactive": "#94a3b8",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+        }
+
+        .dark .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
+    <header
+        class="sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="bg-primary p-2 rounded-lg">
+                <span class="material-icons text-white">emergency</span>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">Emergency Operations</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Dashboard
+                    v2.0</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-8">
+            <div class="text-center">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Current Time</p>
+                <p class="text-2xl font-mono font-bold text-primary" id="clock">09:48:50</p>
+            </div>
+            <div class="flex items-center gap-2 border-l border-slate-200 dark:border-slate-800 pl-8">
+                <button class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+                    onclick="document.documentElement.classList.toggle('dark')">
+                    <span class="material-icons">dark_mode</span>
+                </button>
+                <div class="flex items-center gap-3 ml-2">
+                    <div
+                        class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden">
+                        <span class="material-icons text-slate-400">person</span>
+                    </div>
+                    <div class="hidden lg:block text-right">
+                        <p class="text-sm font-bold">Admin Supervisor</p>
+                        <p class="text-xs text-slate-500">ID: SUPER_01</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="flex h-[calc(100vh-81px)]">
+        <aside
+            class="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 flex flex-col gap-6 overflow-y-auto">
+            <div>
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Quick Status</h2>
+                <nav class="space-y-2">
+                    <button
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all font-semibold">
+                        <span class="material-icons text-primary">login</span> Entrar
+                    </button>
+                    <button
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-status-active/10 text-status-active border border-status-active/20 font-bold">
+                        <span class="material-icons">headset_mic</span> Activo
+                    </button>
+                    <button
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        <span class="material-icons">pause_circle</span> Descanso
+                    </button>
+                    <button
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        <span class="material-icons">school</span> Formación
+                    </button>
+                    <button
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        <span class="material-icons">sync_alt</span> Suplencia
+                    </button>
+                    <button
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        <span class="material-icons">admin_panel_settings</span> Gerencia
+                    </button>
+                </nav>
+            </div>
+            <div class="mt-auto border-t border-slate-200 dark:border-slate-800 pt-6">
+                <button
+                    class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all font-semibold">
+                    <span class="material-icons">logout</span> Salir
+                </button>
+            </div>
+        </aside>
+        <section class="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 p-6">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-2xl font-bold flex items-center gap-2">
+                        <span class="material-icons text-slate-400">group</span>
+                        Seguimiento de Pausas y Descanso
+                    </h2>
+                    <div class="flex gap-4">
+                        <div
+                            class="flex items-center gap-4 text-xs font-semibold px-4 py-2 bg-white dark:bg-slate-900 rounded-full shadow-sm border border-slate-200 dark:border-slate-800">
+                            <span class="flex items-center gap-1"><span
+                                    class="w-2 h-2 rounded-full bg-status-active"></span> Active: 14</span>
+                            <span class="flex items-center gap-1"><span
+                                    class="w-2 h-2 rounded-full bg-status-break"></span> Break: 3</span>
+                            <span class="flex items-center gap-1"><span
+                                    class="w-2 h-2 rounded-full bg-status-inactive"></span> Idle: 9</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    <div
+                        class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border-b-4 border-status-active hover:shadow-md transition-shadow relative group">
+                        <span
+                            class="absolute top-2 left-3 text-[10px] font-black text-slate-300 dark:text-slate-700">STATION
+                            01</span>
+                        <div class="flex flex-col items-center py-4">
+                            <div class="relative mb-3">
+                                <div
+                                    class="w-16 h-16 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center text-status-active">
+                                    <span class="material-icons text-4xl">support_agent</span>
+                                </div>
+                                <div
+                                    class="absolute bottom-0 right-0 w-4 h-4 bg-status-active border-2 border-white dark:border-slate-900 rounded-full">
+                                </div>
+                            </div>
+                            <h3 class="font-bold text-sm tracking-tight">MARODI_C</h3>
+                            <div class="flex items-center gap-1 mt-1 text-status-active">
+                                <span class="material-icons text-xs">timer</span>
+                                <span class="text-xs font-mono font-bold">00:08:30</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border-b-4 border-status-break hover:shadow-md transition-shadow relative">
+                        <span
+                            class="absolute top-2 left-3 text-[10px] font-black text-slate-300 dark:text-slate-700">STATION
+                            02</span>
+                        <div class="flex flex-col items-center py-4">
+                            <div class="relative mb-3 text-status-break">
+                                <div
+                                    class="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                                    <span class="material-icons text-4xl">coffee</span>
+                                </div>
+                                <div
+                                    class="absolute bottom-0 right-0 w-4 h-4 bg-status-break border-2 border-white dark:border-slate-900 rounded-full">
+                                </div>
+                            </div>
+                            <h3 class="font-bold text-sm tracking-tight">RASINO</h3>
+                            <div class="flex items-center gap-1 mt-1 text-status-break">
+                                <span class="material-icons text-xs">timer</span>
+                                <span class="text-xs font-mono font-bold">00:02:00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        class="bg-slate-100/50 dark:bg-slate-800/30 p-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 relative">
+                        <span
+                            class="absolute top-2 left-3 text-[10px] font-black text-slate-300 dark:text-slate-600">STATION
+                            03</span>
+                        <div class="flex flex-col items-center py-4 opacity-40">
+                            <div class="mb-3 text-slate-400">
+                                <div
+                                    class="w-16 h-16 rounded-full border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center">
+                                    <span class="material-icons text-4xl">desktop_windows</span>
+                                </div>
+                            </div>
+                            <h3 class="font-medium text-sm italic">Sin conexión</h3>
+                            <p class="text-xs font-mono mt-1">--:--:--</p>
+                        </div>
+                    </div>
+                    <script>
+                        const statuses = ['active', 'active', 'training', 'active', 'active', 'break', 'active', 'active', 'inactive', 'active', 'active', 'active', 'inactive', 'active'];
+                        const names = ['NICAAN', 'NUORGA', 'TABRBU', 'MAORMO', 'CAROMO', 'VADICU', 'MECAMA', 'ANORMU', 'MACLCA', 'JEPACA', 'DOLOTO', 'CRPAVA', 'MACLCA', 'JEPACA'];
+                        const grid = document.querySelector('.grid');
+                        names.forEach((name, i) => {
+                            const status = statuses[i % statuses.length];
+                            let borderClass = 'border-status-active';
+                            let icon = 'support_agent';
+                            let iconContainerClass = 'bg-green-50 dark:bg-green-900/20 text-status-active';
+                            let badgeClass = 'bg-status-active';
+                            let textClass = 'text-status-active';
+                            if (status === 'break') {
+                                borderClass = 'border-status-break';
+                                icon = 'coffee';
+                                iconContainerClass = 'bg-blue-50 dark:bg-blue-900/20 text-status-break';
+                                badgeClass = 'bg-status-break';
+                                textClass = 'text-status-break';
+                            } else if (status === 'training') {
+                                borderClass = 'border-status-training';
+                                icon = 'school';
+                                iconContainerClass = 'bg-amber-50 dark:bg-amber-900/20 text-status-training';
+                                badgeClass = 'bg-status-training';
+                                textClass = 'text-status-training';
+                            } else if (status === 'inactive') {
+                                grid.innerHTML += `
+                                    <div class="bg-slate-100/50 dark:bg-slate-800/30 p-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 relative">
+                                        <span class="absolute top-2 left-3 text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase">STATION ${i + 4 < 10 ? '0' + (i + 4) : (i + 4)}</span>
+                                        <div class="flex flex-col items-center py-4 opacity-40">
+                                            <div class="mb-3 text-slate-400">
+                                                <div class="w-16 h-16 rounded-full border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center">
+                                                    <span class="material-icons text-4xl">desktop_windows</span>
+                                                </div>
+                                            </div>
+                                            <h3 class="font-medium text-sm italic">Disponible</h3>
+                                            <p class="text-xs font-mono mt-1">--:--:--</p>
+                                        </div>
+                                    </div>
+                                `;
+                                return;
+                            }
+                            grid.innerHTML += `
+                                <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border-b-4 ${borderClass} hover:shadow-md transition-shadow relative">
+                                    <span class="absolute top-2 left-3 text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase">STATION ${i + 4 < 10 ? '0' + (i + 4) : (i + 4)}</span>
+                                    <div class="flex flex-col items-center py-4">
+                                        <div class="relative mb-3">
+                                            <div class="w-16 h-16 rounded-full ${iconContainerClass} flex items-center justify-center">
+                                                <span class="material-icons text-4xl">${icon}</span>
+                                            </div>
+                                            <div class="absolute bottom-0 right-0 w-4 h-4 ${badgeClass} border-2 border-white dark:border-slate-900 rounded-full"></div>
+                                        </div>
+                                        <h3 class="font-bold text-sm tracking-tight uppercase">${name}</h3>
+                                        <div class="flex items-center gap-1 mt-1 ${textClass}">
+                                            <span class="material-icons text-xs">timer</span>
+                                            <span class="text-xs font-mono font-bold">${Math.floor(Math.random() * 24).toString().padStart(2, '0')}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    </script>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script>
+        // Simple clock update
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+
+</body>
+
+</html>

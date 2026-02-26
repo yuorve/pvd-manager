@@ -1,0 +1,640 @@
+<?php 
+class Conexion  // se declara una clase para hacer la conexion con la base de datos
+{
+	var $con;
+	function Conexion()
+	{
+		// se definen los datos del servidor de base de datos 
+		$conection['server']="localhost";  	//host
+		$conection['user']="root";         //  usuario
+		$conection['pass']="";             //password
+		$conection['base']="pvd";           //base de datos
+		
+		// crea la conexion pasandole el servidor , usuario y clave
+		$conect= mysql_connect($conection['server'],$conection['user'],$conection['pass']);
+		
+		if ($conect) // si la conexion fue exitosa , selecciona la base
+		{
+			mysql_select_db($conection['base']);			
+			$this->con=$conect;
+		}
+	}
+	function getConexion() // devuelve la conexion
+	{
+		return $this->con;
+	}
+	function Close()  // cierra la conexion
+	{
+		mysql_close($this->con);
+	}	
+
+}
+
+class sQuery   // se declara una clase para poder ejecutar las consultas, esta clase llama a la clase anterior
+{
+
+	var $coneccion;
+	var $consulta;
+	var $resultados;
+	function sQuery()  // constructor, solo crea una conexion usando la clase "Conexion"
+	{
+		$this->coneccion= new Conexion();
+	}
+	function executeQuery($cons)  // metodo que ejecuta una consulta y la guarda en el atributo $pconsulta
+	{
+		$this->consulta= mysql_query($cons,$this->coneccion->getConexion());
+		return $this->consulta;
+	}	
+	function getResults()   // retorna la consulta en forma de result.
+	{return $this->consulta;}
+	
+	function Close()		// cierra la conexion
+	{$this->coneccion->Close();}	
+	
+	function Clean() // libera la consulta
+	{mysql_free_result($this->consulta);}
+	
+	function getResultados() // debuelve la cantidad de registros encontrados
+	{return mysql_affected_rows($this->coneccion->getConexion()) ;}
+	
+	function getAffect() // devuelve las cantidad de filas afectadas
+	{return mysql_affected_rows($this->coneccion->getConexion()) ;}
+
+	function getRows() // devuelve las cantidad de filas encontradas
+	{return mysql_num_rows($this->consulta) ;}
+
+    function fetchAll()
+    {
+        $rows=array();
+		if ($this->consulta)
+		{
+			while($row=  mysql_fetch_array($this->consulta))
+			{
+				$rows[]=$row;
+			}
+		}
+        return $rows;
+    }
+}
+
+class Station
+{
+	var $stationID;
+	var $stateID;
+	var $addressIP;
+	var $timeSTAMP;
+
+    public static function getStations() 
+		{
+			$obj_station=new sQuery();
+			$obj_station->executeQuery("select *, NULL horaPVD, NULL horaDESCANSO, TIMEDIFF(NOW(),timeSTAMP) time, IF((TIMEDIFF(NOW(),timeSTAMP)>(SEC_TO_TIME(TIME_TO_SEC(timer)-60))) AND (stateID>1),IF(TIMEDIFF(NOW(),timeSTAMP)>=timer,1,2),0) as warning from tracking order by stationID"); 
+			//$obj_station->executeQuery("select tracking.*, TIMEDIFF(NOW(),timeSTAMP) time, IF((TIMEDIFF(NOW(),timeSTAMP)>(SEC_TO_TIME(TIME_TO_SEC(timer)-60))) AND (stateID>1),IF(TIMEDIFF(NOW(),timeSTAMP)>=timer,1,2),0) as warning, CONCAT(IF(MINUTE(NOW())>MINUTE(PVD.Comienzo),HOUR(NOW())+1,HOUR(NOW()))+HOUR(PVD.Comienzo),':',IF(MINUTE(PVD.Comienzo)<10, CONCAT('0',MINUTE(PVD.Comienzo)),MINUTE(PVD.Comienzo))) as horaPVD, CONCAT(CASE WHEN HOUR(NOW())>8 AND HOUR(NOW())<15 THEN 9 WHEN HOUR(NOW())>15 AND HOUR(NOW())<22 THEN 16 ELSE CASE HOUR(REST.Comienzo) WHEN 0 THEN 23 ELSE -1 END END+HOUR(REST.Comienzo),':',IF(MINUTE(REST.Comienzo)<10, CONCAT('0',MINUTE(REST.Comienzo)),MINUTE(REST.Comienzo))) as horaDESCANSO from tracking LEFT JOIN trackingTRAMOS REST ON tracking.restID = REST.Id LEFT JOIN trackingTRAMOS PVD ON tracking.pvdID = PVD.Id");
+			//$obj_station->close();
+			return $obj_station->fetchAll();
+		}
+
+
+    public static function getFreeStation() 
+		{
+			$obj_station=new sQuery();
+			$obj_station->executeQuery("SELECT addressIP FROM tracking where addressIP like '127.0.0.%' AND userID is null LIMIT 1"); 
+			return $obj_station->fetchAll();
+		}
+
+    public static function getWarnings($reportDATE='0')
+		{
+		    if ($reportDATE=='0') $reportDATE = date("Y-m-d");
+			$obj_station=new sQuery();
+			$obj_station->executeQuery("select userID, SEC_TO_TIME(SUM(TIME_TO_SEC(timeESTIMATED))) timeESTIMATED, SEC_TO_TIME(SUM(TIME_TO_SEC(timeOVER)-TIME_TO_SEC(timeESTIMATED))) timeOVER from trackingLOG where date(timeSTAMP) = '$reportDATE' group by userID order by userID"); 
+			return $obj_station->fetchAll();
+		}
+
+    public static function getWarningsDETAIL($login='0',$reportDATE='0')
+		{
+		    if ($reportDATE=='0') $reportDATE = date("Y-m-d");
+			$obj_station=new sQuery();
+			$obj_station->executeQuery("select userID, HOUR(TIME(timeSTAMP)) time, stateID, timeESTIMATED, timeOVER, SEC_TO_TIME(TIME_TO_SEC(timeOVER)-TIME_TO_SEC(timeESTIMATED)) timeOVER from trackingLOG where date(timeSTAMP) = '$reportDATE' and userID = '$login' order by userID, HOUR(TIME(timeSTAMP))"); 
+			return $obj_station->fetchAll();
+		}
+
+	public static function getPausas($reportDATE='0')
+		{
+		    if ($reportDATE=='0') $reportDATE = date("Y-m-d");
+			$obj_station=new sQuery();			
+			$obj_station->executeQuery("select trackingPVD.userID, HOUR(TIMEDIFF(CURRENT_TIMESTAMP, timeSTAMP)) as ALLOWCHANGE, DATE_FORMAT(timeSTAMP,'%d/%m/%Y %H:%i') as LOGADO, IF(MINUTE(PVD.Comienzo)<10, CONCAT('0',MINUTE(PVD.Comienzo)),MINUTE(PVD.Comienzo)) as PVD, CONCAT(CASE WHEN HOUR(timeSTAMP)>=6 AND HOUR(timeSTAMP)<=12 THEN 9 WHEN HOUR(timeSTAMP)>=14 AND HOUR(timeSTAMP)<=20 THEN 16 ELSE CASE HOUR(REST.Comienzo) WHEN 0 THEN 23 ELSE -1 END END+HOUR(REST.Comienzo),':',IF(MINUTE(REST.Comienzo)<10, CONCAT('0',MINUTE(REST.Comienzo)),MINUTE(REST.Comienzo))) as DESCANSO from trackingPVD LEFT JOIN trackingTRAMOS REST ON trackingPVD.restID = REST.Id LEFT JOIN trackingTRAMOS PVD ON trackingPVD.pvdID = PVD.Id where date(timeSTAMP) = '$reportDATE' order by timeSTAMP");
+			return $obj_station->fetchAll();
+		}
+
+	public static function getTramos()
+		{
+		    $obj_station=new sQuery();			
+		    $obj_station->executeQuery("select Id, CONCAT(CASE WHEN HOUR(CURRENT_TIMESTAMP)>=6 AND HOUR(CURRENT_TIMESTAMP)<=12 THEN 9 WHEN HOUR(CURRENT_TIMESTAMP)>=14 AND HOUR(CURRENT_TIMESTAMP)<=20 THEN 16 ELSE CASE HOUR(Comienzo) WHEN 0 THEN 23 ELSE -1 END END+HOUR(Comienzo),':',IF(MINUTE(Comienzo)<10, CONCAT('0',MINUTE(Comienzo)),MINUTE(Comienzo))) as DESCANSO from trackingTRAMOS WHERE Tipo=1 order by Id");
+		    return $obj_station->fetchAll();
+		}
+
+	public static function Hora($pvdID=0) // devuelvo la hora del descanso o PVD
+	{
+		if ($pvdID>0)
+		{
+			// Devuelvo el registro
+    			$obj_station=new sQuery();
+	    		$result=$obj_station->executeQuery("select HOUR(`Comienzo`) as H, Tipo from trackingTRAMOS where Id = $pvdID");
+			$row=mysql_fetch_array($result);
+			return $row['H'];
+		} else {
+		    return;
+		}
+	}
+
+	public static function Minutos($pvdID=0) // devuelvo el minuto del descanso o PVD
+	{
+		if ($pvdID>0)
+		{
+			// Devuelvo el registro
+    			$obj_station=new sQuery();
+	    		$result=$obj_station->executeQuery("select MINUTE(`Comienzo`) as M, Tipo from trackingTRAMOS where Id = $pvdID");
+			$row=mysql_fetch_array($result);
+			return $row['M'];
+		} else {
+		    return;
+		}
+	}
+
+	public static function PVD($pvdID=0) // devuelvo la hora del descanso o PVD
+	{
+		if ($pvdID>0)
+		{
+		// Devuelvo el registro
+    		$obj_station=new sQuery();
+	    	$result=$obj_station->executeQuery("select HOUR(`Comienzo`) as H, MINUTE(`Comienzo`) as M, Tipo from trackingTRAMOS where Id = $pvdID");
+		$row=mysql_fetch_array($result);
+		if ($row['Tipo']==0) {
+			$hora=date("H");
+			if (date("i")>$row['M']) {
+				$hora++;
+		}} else {
+
+			if (date("H")>=6 and date("H")<=12) {
+				$hora = 9;
+			} elseif (date("H")>=14 and date("H")<=20) {
+				$hora = 16;
+			} else {
+				$hora = 23;
+			}
+			$hora=$hora+$row['H'];
+			if ($hora>23) $hora=$hora-24;
+		}
+		$minuto = $row['M'];
+		//if ($hora<10) $hora="0".$hora;
+		if ($minuto<10) $minuto="0".$minuto;
+		return $hora.":".$minuto;
+
+		}
+	}
+
+
+	public static function CheckUser($login='0') // declara el constructor, si trae el numero de cliente lo busca
+	{
+		if ($login!='0')
+		{
+			$obj_station=new sQuery();
+			$result=$obj_station->executeQuery("select * from trackingUSERS where userLOGIN = '$login'");
+			return mysql_num_rows($result);
+		} else {
+		    return 0;
+		}
+	}
+
+	function Station($addressIP='0') // declara el constructor, si trae el numero de cliente lo busca
+	{
+		if ($addressIP!='0')
+		{
+			// Devuelvo al station actual
+    		$obj_station=new sQuery();
+	    	$result=$obj_station->executeQuery("select tracking.stationID, tracking.userID, tracking.stateID, trackingPVD.pvdID, trackingPVD.restID, tracking.addressIP, tracking.timer, tracking.timeSTAMP from tracking LEFT JOIN trackingPVD ON tracking.userID = trackingPVD.userID where addressIP = '$addressIP' ORDER BY trackingPVD.Id DESC LIMIT 1");
+		If ($obj_station->getRows() > 0) {
+			$row=mysql_fetch_array($result);
+			$this->stationID=$row['stationID'];
+			$this->userID=$row['userID'];
+			$this->stateID=$row['stateID'];
+			$this->pvdID=$row['pvdID'];
+			$this->restID=$row['restID'];
+			$this->addressIP=$row['addressIP'];
+			$this->timer=$row['timer'];
+			$this->timeSTAMP=$row['timeSTAMP'];
+			}
+		}
+	}
+		
+		// metodos que devuelven valores
+	function getstationID()
+	 { return $this->stationID;}
+	function getuserID()
+	 { return $this->userID;}
+	function getstateID()
+	 { return $this->stateID;}
+	function getaddressIP()
+	 { return $this->addressIP;}
+	function gettimer()
+	 { return $this->timer;}
+	function gettimeSTAMP()
+	 { return $this->timeSTAMP;}
+	 
+		// metodos que setean los valores
+	function setstationID($val)
+	 { $this->stationID=$val;}
+	function setuserID($val)
+	 { $this->userID=$val;}
+	function setstateID($val)
+	 {  $this->stateID=$val;}
+	function setaddressIP($val)
+	 {  $this->addressIP=$val;}
+	function settimer($val)
+	 {  $this->timer=$val;}
+	function settimeSTAMP($val)
+	 {  $this->timeSTAMP=$val;}
+
+    function KeepAlive()
+    {
+        // Actualiza la Station Actual (KeepAlive)
+		$obj_station=new sQuery();
+		$query="update tracking set KeepAlive=NOW() where addressIP = '$this->addressIP'";
+		$obj_station->executeQuery($query); // ejecuta la consulta para traer al cliente 
+		//$obj_station->Close();
+		return $obj_station->getAffect(); // retorna todos los registros afectados
+    }
+    
+    function RebootPVD()
+    {
+		// Se borran todos PVD y DESCANSOS activos, para el cambio de turno.
+		$obj_station=new sQuery();
+    		$query="update tracking set pvdID=0, restID=0, actualizado='0000-00-00 00:00:00'";
+	    	$obj_station->executeQuery($query); // ejecuta la consulta para traer al cliente 
+		return $obj_station->getAffect(); // retorna todos los registros afectados
+    }
+
+    function Clean()
+    {
+		// Limpio los registros que no tengan el KeepAlive actualizado
+		$obj_station=new sQuery();
+    	$query="update tracking set userID=NULL, pvdID=0, restID=0, stateID=0, timer='00:00:00' where TIME_TO_SEC(TIMEDIFF(NOW(),KeepAlive)) > 60";
+	    $obj_station->executeQuery($query); // ejecuta la consulta para traer al cliente 
+		return $obj_station->getAffect(); // retorna todos los registros afectados
+    }
+
+	function login($addressIP='0')	// actualiza el resgitro cargado en los atributos
+	{
+
+
+		//$obj_PVD=new sQuery();
+		//$query="SELECT IFNULL( (SELECT trackingTRAMOS.Id FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.pvdID WHERE mod( trackingTRAMOS.Id , 2 ) = 1 AND trackingTRAMOS.Tipo = 0 GROUP BY trackingTRAMOS.Id HAVING COUNT(tracking.stationID) = ( SELECT IF( (SELECT MIN(Solapamientos) Solapados FROM (SELECT trackingTRAMOS.Id, COUNT(tracking.stationID) Solapamientos FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.pvdID WHERE mod( trackingTRAMOS.Id , 2 ) =1 GROUP BY trackingTRAMOS.Id) DBTEMP) <= (SELECT MIN(Solapamientos) Solapados FROM (SELECT trackingTRAMOS.Id, COUNT(tracking.stationID) Solapamientos FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.pvdID WHERE mod( trackingTRAMOS.Id , 2 ) =1 GROUP BY trackingTRAMOS.Id) DBTEMP), (SELECT MIN(Solapamientos) Solapados FROM (SELECT trackingTRAMOS.Id, COUNT(tracking.stationID) Solapamientos FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.pvdID WHERE mod( trackingTRAMOS.Id , 2 ) =0 GROUP BY trackingTRAMOS.Id) DBTEMP), NULL ) ) ORDER BY RAND() LIMIT 1), (SELECT trackingTRAMOS.Id FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.pvdID WHERE mod( trackingTRAMOS.Id , 2 ) = 0 AND trackingTRAMOS.Tipo = 0 GROUP BY trackingTRAMOS.Id HAVING COUNT(tracking.stationID) = ( SELECT MIN(Solapamientos) Solapados FROM (SELECT trackingTRAMOS.Id, COUNT(tracking.stationID) Solapamientos FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.pvdID WHERE mod( trackingTRAMOS.Id , 2 ) =0 GROUP BY trackingTRAMOS.Id) DBTEMP ) ORDER BY RAND() LIMIT 1) ) resultado";
+		//$obj_PVD->executeQuery($query); // ejecuta la consulta obtener el PVD
+		//$PVD = $obj_PVD->fetchAll();				
+		//$INICIO_PVD = Station::Minutos($PVD[0][0]);
+		//$FIN_PVD = $INICIO_PVD+7;
+
+		$obj_SOLAPAMIENTOS_PARES=new sQuery();
+		$query="SELECT MIN(Solapamientos) Solapados FROM (SELECT trackingTRAMOS.Id, COUNT(tracking.stationID) Solapamientos FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.pvdID WHERE mod( trackingTRAMOS.Id , 2 ) =0 AND Tipo=0 GROUP BY trackingTRAMOS.Id) DBTEMP";
+		$obj_SOLAPAMIENTOS_PARES->executeQuery($query); // ejecuta la consulta obtener los solapamientos pares actuales
+		$MIN_SOLAPAMIENTO_PARES = $obj_SOLAPAMIENTOS_PARES->fetchAll();
+
+		$obj_SOLAPAMIENTOS_IMPARES=new sQuery();
+		$query="SELECT MIN(Solapamientos) Solapados FROM (SELECT trackingTRAMOS.Id, COUNT(tracking.stationID) Solapamientos FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.pvdID WHERE mod( trackingTRAMOS.Id , 2 ) =1 AND Tipo=0 GROUP BY trackingTRAMOS.Id) DBTEMP";
+		$obj_SOLAPAMIENTOS_IMPARES->executeQuery($query); // ejecuta la consulta obtener los solapamientos impares actuales
+		$MIN_SOLAPAMIENTO_IMPARES = $obj_SOLAPAMIENTOS_IMPARES->fetchAll();
+
+		//Si el minimo de los solapamientos impares es menor que en los pares, busco el tramo en impares sino en los pares 
+		IF ($MIN_SOLAPAMIENTO_IMPARES[0][0]<=$MIN_SOLAPAMIENTO_PARES[0][0]) {
+			$obj_TRAMOS=new sQuery();
+			$query="SELECT trackingTRAMOS.Id FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.pvdID WHERE mod( trackingTRAMOS.Id , 2 ) = 1 AND trackingTRAMOS.Tipo = 0 GROUP BY trackingTRAMOS.Id HAVING COUNT(tracking.stationID) = ( ".$MIN_SOLAPAMIENTO_IMPARES[0][0]." ) ORDER BY RAND() LIMIT 1";
+			$obj_TRAMOS->executeQuery($query); // ejecuta la consulta obtener los solapamientos actuales
+			$TRAMO = $obj_TRAMOS->fetchAll();
+		} else {
+			$obj_TRAMOS=new sQuery();
+			$query="SELECT trackingTRAMOS.Id FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.pvdID WHERE mod( trackingTRAMOS.Id , 2 ) = 0 AND trackingTRAMOS.Tipo = 0 GROUP BY trackingTRAMOS.Id HAVING COUNT(tracking.stationID) = ( ".$MIN_SOLAPAMIENTO_PARES[0][0]." ) ORDER BY RAND() LIMIT 1";
+			$obj_TRAMOS->executeQuery($query); // ejecuta la consulta obtener los solapamientos actuales
+			$TRAMO = $obj_TRAMOS->fetchAll();
+		}
+		$PVD=$TRAMO[0][0];
+		$INICIO_PVD = Station::Minutos($PVD);
+		$FIN_PVD = $INICIO_PVD+7;
+
+		//$obj_DESCANSO=new sQuery();
+		//$query="SELECT IFNULL( (SELECT trackingTRAMOS.Id FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.restID WHERE mod( trackingTRAMOS.Id , 2 ) = 1 AND trackingTRAMOS.Tipo = 1 GROUP BY trackingTRAMOS.Id HAVING COUNT(tracking.stationID) = ( SELECT IF( (SELECT MIN(Solapamientos) Solapados FROM (SELECT trackingTRAMOS.Id, COUNT(tracking.stationID) Solapamientos FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.restID WHERE mod( trackingTRAMOS.Id , 2 ) =1 GROUP BY trackingTRAMOS.Id) DBTEMP) <= (SELECT MIN(Solapamientos) Solapados FROM (SELECT trackingTRAMOS.Id, COUNT(tracking.stationID) Solapamientos FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.restID WHERE mod( trackingTRAMOS.Id , 2 ) =1 GROUP BY trackingTRAMOS.Id) DBTEMP), (SELECT MIN(Solapamientos) Solapados FROM (SELECT trackingTRAMOS.Id, COUNT(tracking.stationID) Solapamientos FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.restID WHERE mod( trackingTRAMOS.Id , 2 ) =0 GROUP BY trackingTRAMOS.Id) DBTEMP), NULL ) ) ORDER BY RAND() LIMIT 1), (SELECT trackingTRAMOS.Id FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.restID WHERE mod( trackingTRAMOS.Id , 2 ) = 0 AND trackingTRAMOS.Tipo = 1 GROUP BY trackingTRAMOS.Id HAVING COUNT(tracking.stationID) = ( SELECT MIN(Solapamientos) Solapados FROM (SELECT trackingTRAMOS.Id, COUNT(tracking.stationID) Solapamientos FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.restID WHERE mod( trackingTRAMOS.Id , 2 ) =0 GROUP BY trackingTRAMOS.Id) DBTEMP ) ORDER BY RAND() LIMIT 1) ) resultado";
+		//$obj_DESCANSO->executeQuery($query); // ejecuta la consulta obtener el DESCANSO
+		//$DESCANSO = $obj_DESCANSO->fetchAll();
+		//$INICIO_DESCANSO = Station::Minutos($DESCANSO[0][0]);
+		//$FIN_DESCANSO = $INICIO_DESCANSO+20;
+
+		$obj_SOLAPAMIENTOS_PARES=new sQuery();
+		$query="SELECT MIN(Solapamientos) Solapados FROM (SELECT trackingTRAMOS.Id, COUNT(tracking.stationID) Solapamientos FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.restID WHERE mod( trackingTRAMOS.Id , 2 ) =0 AND Tipo=1 GROUP BY trackingTRAMOS.Id) DBTEMP";
+		$obj_SOLAPAMIENTOS_PARES->executeQuery($query); // ejecuta la consulta obtener los solapamientos pares actuales
+		$MIN_SOLAPAMIENTO_PARES = $obj_SOLAPAMIENTOS_PARES->fetchAll();
+
+		$obj_SOLAPAMIENTOS_IMPARES=new sQuery();
+		$query="SELECT MIN(Solapamientos) Solapados FROM (SELECT trackingTRAMOS.Id, COUNT(tracking.stationID) Solapamientos FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.restID WHERE mod( trackingTRAMOS.Id , 2 ) =1 AND Tipo=1 GROUP BY trackingTRAMOS.Id) DBTEMP";
+		$obj_SOLAPAMIENTOS_IMPARES->executeQuery($query); // ejecuta la consulta obtener los solapamientos impares actuales
+		$MIN_SOLAPAMIENTO_IMPARES = $obj_SOLAPAMIENTOS_IMPARES->fetchAll();
+
+		//Repito hasta encontrar la opción válida para el descanso
+		$LOOPS = 0;
+		Do {
+			$OK = 1;
+			//Si el minimo de los solapamientos impares es menor que en los pares, busco el tramo en impares sino en los pares 
+			IF ($MIN_SOLAPAMIENTO_IMPARES[0][0]<=$MIN_SOLAPAMIENTO_PARES[0][0]) {
+				$obj_TRAMOS=new sQuery();
+				$query="SELECT trackingTRAMOS.Id FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.restID WHERE mod( trackingTRAMOS.Id , 2 ) = 1 AND trackingTRAMOS.Tipo = 1 GROUP BY trackingTRAMOS.Id HAVING COUNT(tracking.stationID) = ( ".$MIN_SOLAPAMIENTO_IMPARES[0][0]." ) ORDER BY RAND()";
+				$obj_TRAMOS->executeQuery($query); // ejecuta la consulta obtener los solapamientos actuales
+				$TRAMO = $obj_TRAMOS->fetchAll();
+				//Si solo hay una opción o si los intentos de encontrar hueco superan a los registros, fuerzo al vector par.
+				if ($obj_TRAMOS->getRows() == 1 || $obj_TRAMOS->getRows() < $LOOPS) {
+					$MIN_SOLAPAMIENTO_IMPARES[0][0] = $MIN_SOLAPAMIENTO_IMPARES[0][0] + 1;
+					$LOOPS = 0;
+				}
+			} else {
+				$obj_TRAMOS=new sQuery();
+				$query="SELECT trackingTRAMOS.Id FROM trackingTRAMOS LEFT JOIN tracking ON trackingTRAMOS.Id = tracking.restID WHERE mod( trackingTRAMOS.Id , 2 ) = 0 AND trackingTRAMOS.Tipo = 1 GROUP BY trackingTRAMOS.Id HAVING COUNT(tracking.stationID) = ( ".$MIN_SOLAPAMIENTO_PARES[0][0]." ) ORDER BY RAND()";
+				$obj_TRAMOS->executeQuery($query); // ejecuta la consulta obtener los solapamientos actuales
+				$TRAMO = $obj_TRAMOS->fetchAll();
+				//Si solo hay una opción o si los intentos de encontrar hueco superan a los registros, fuerzo al vector impar.
+				if ($obj_TRAMOS->getRows() == 1 || $obj_TRAMOS->getRows() < $LOOPS) {
+					$MIN_SOLAPAMIENTO_PARES[0][0] = $MIN_SOLAPAMIENTO_PARES[0][0] + 1;
+					$LOOPS = 0;
+				}
+			}
+			$DESCANSO=$TRAMO[0][0];
+			$INICIO_DESCANSO = Station::Minutos($DESCANSO);
+			IF (date("H")<20) {
+				$FIN_DESCANSO = $INICIO_DESCANSO+20;
+			} else {
+				$FIN_DESCANSO = $INICIO_DESCANSO+30;
+			}
+			//Evaluo que el PVD no esté contenido en el DESCANSO
+			IF ($INICIO_PVD >= $INICIO_DESCANSO && $INICIO_PVD <= $FIN_DESCANSO) $OK = 0;
+			IF ($FIN_PVD >= $INICIO_DESCANSO && $FIN_PVD <= $FIN_DESCANSO) $OK = 0;
+			$LOOPS = $LOOPS + 1;
+			
+			//Evaluo que el DESCANSO no sea dentro de la misma hora del logado o anterior a esta
+			//IF (date("H",strtotime(Station::PVD($DESCANSO))) <= date("H")) $OK = 0;
+				
+		} While ( $OK == 0 );
+
+		if ($addressIP=='0') $addressIP=$this->addressIP;
+
+		//Comprobamos si ya tiene pvd asignado
+		$obj_logado=new sQuery();		
+	    	$result=$obj_logado->executeQuery("select * from trackingPVD where userID = UPPER('$this->userID') AND timeSTAMP > DATE_SUB(NOW(), INTERVAL 12 HOUR) LIMIT 1");
+		$row=mysql_fetch_array($result); 
+
+		//Si ya tiene PVD asignado se actualiza con ese y no se inserta en la tabla de control o sino se actualiza con el nuevo que le ha tocado y se inserta
+		if ($row['pvdID'] > 0) {
+			$obj_station=new sQuery();
+			$query="update tracking set pvdID=".$row['pvdID'].", restID=".$row['restID'].", userID=UPPER('$this->userID'), stateID=$this->stateID, timeSTAMP=CURRENT_TIMESTAMP, actualizado='".$row['timeSTAMP']."' where addressIP = '$addressIP'";
+			$obj_station->executeQuery($query); // ejecuta la consulta para traer al cliente 
+			return $obj_station->getAffect(); // retorna todos los registros afectados				
+	
+		} else {
+
+			$obj_trackingPVD=new sQuery();
+			$query="insert into trackingPVD (userID, pvdID, restID, generado, timeSTAMP) value (UPPER('$this->userID'),".$PVD.",".$DESCANSO.", 1, CURRENT_TIMESTAMP)";
+			$obj_trackingPVD->executeQuery($query); // ejecuta la consulta insertar el tracking de descansos y PvD
+
+			$obj_station=new sQuery();
+			$query="update tracking set pvdID=".$PVD.", restID=".$DESCANSO.", userID=UPPER('$this->userID'), stateID=$this->stateID, timeSTAMP=CURRENT_TIMESTAMP, actualizado=CURRENT_TIMESTAMP where addressIP = '$addressIP'";			
+			$obj_station->executeQuery($query); // ejecuta la consulta para traer al cliente 
+			return $obj_station->getAffect(); // retorna todos los registros afectados	
+		}
+	}
+
+	function save()	// actualiza el resgitro cargado en los atributos
+	{
+			$obj_station=new sQuery();
+			$query="update tracking set stateID=$this->stateID, timer='$this->timer', timeSTAMP=NOW() where addressIP = '$this->addressIP' and userID is not null";
+			$obj_station->executeQuery($query); // ejecuta la consulta para traer al cliente 
+			return $obj_station->getAffect(); // retorna todos los registros afectados
+	
+	}
+
+	function insertLOG()	// inserta el resgitro cargado en los atributos
+	{
+		$obj_station=new sQuery();
+		$query="insert INTO trackingLOG (stationID, userID, stateID, timeESTIMATED, timeOVER, timeSTAMP) VALUES($this->stationID, '$this->userID', $this->stateID, '$this->timer', TIMEDIFF(NOW(),'$this->timeSTAMP'), NOW())";
+		$obj_station->executeQuery($query); // ejecuta la consulta para traer al cliente 
+		return $obj_station->getAffect(); // retorna todos los registros afectados
+	}
+
+	function updateLOG()	// actualiza el resgitro cargado en los atributos
+	{
+	   if($this->stateID==5){
+			$obj_station=new sQuery();
+			$query="update trackingLOG set timeOVER = NOW()-timeSTAMP where userID = '$this->userID' and stateID = $this->stateID";
+			$obj_station->executeQuery($query); // ejecuta la consulta para traer al cliente 
+			return $obj_station->getAffect(); // retorna todos los registros afectados
+	   }
+	}
+
+
+	public static function changeREST($login='0',$rest='0')	// actualiza el resgitro cargado en los atributos
+	{
+			$obj_station=new sQuery();
+			$query="update trackingPVD set restID='$rest', generado = 0 where userID = '$login' and DATE(timeSTAMP) = CURDATE() and HOUR(TIMEDIFF(CURRENT_TIMESTAMP, timeSTAMP))<1";
+			$obj_station->executeQuery($query); // ejecuta la consulta para traer al cliente 
+			return $obj_station->getAffect(); // retorna todos los registros afectados
+	
+	}
+
+	function warning()	// actualiza el resgitro cargado en los atributos
+	{
+			$obj_station=new sQuery();
+			$query="update tracking set stateID=5 where addressIP = '$this->addressIP' and userID is not null";
+			$obj_station->executeQuery($query); // ejecuta la consulta para traer al cliente 
+			return $obj_station->getAffect(); // retorna todos los registros afectados
+	
+	}
+	
+	function adduser($login='0')	// actualiza el resgitro cargado en los atributos
+	{
+			$obj_station=new sQuery();
+			$query="insert INTO trackingUSERS (userLOGIN) VALUES('$login')";
+			$obj_station->executeQuery($query); // ejecuta la consulta para traer al cliente 
+			return $obj_station->getAffect(); // retorna todos los registros afectados
+	
+	}	
+
+	function logout($login='0')	// logout
+	{			
+			$obj_station=new sQuery();
+			if ($login=='0') {
+				$query="update tracking set userID=NULL, pvdID=0, restID=0, stateID=0, timer='00:00:00', timeSTAMP=NOW() where addressIP = '$this->addressIP' and userID is not null";
+			} else {
+				$query="update tracking set userID=NULL, pvdID=0, restID=0, stateID=0, timer='00:00:00', timeSTAMP=NOW() where userID = '$login'";
+			}
+			$obj_station->executeQuery($query); // ejecuta la consulta para traer al cliente 
+			return $obj_station->getAffect(); // retorna todos los registros afectados
+	
+	}
+
+    function cleanString($string)
+    {
+        $string=trim($string);
+        $string=mysql_escape_string($string);
+    	$string=htmlspecialchars($string);
+    	
+        return $string;
+    }
+
+}
+
+/* draws a calendar */
+function draw_calendar($month,$year){
+
+	/* draw table */
+	$months = array('Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Sept.','Octubre','Nov.','Dic.');
+	$calendar= '<table cellpadding="0" cellspacing="0" class="calendar">';
+
+	/* table headings */
+	$m_previously = (11 > $month && 1 < $month) ? '0' : '';
+	$m_previously .= (1 == $month) ? '12' : ($month - 1);
+	$y_previously = (1 == $month) ? ($year - 1) : $year;
+
+	$m_commingsoon = (9 > $month || 12 == $month) ? '0' : '';
+	$m_commingsoon .= (12 == $month) ? '1' : ($month + 1);
+	$y_commingsoon = (12 == $month) ? ($year + 1) : $year;
+ 
+	$headings = array('D','L','M','X','J','V','S');
+	$calendar.= '<tr class="calendar-row"><td class="calendar-day-head" onclick=document.location="data.php?f='.$y_previously.'-'.$m_previously.'-01"><</td><td class="calendar-day-head" colspan="5">'.$months[$month-1].' '.$year.'</td><td class="calendar-day-head" onclick=document.location="data.php?f='.$y_commingsoon.'-'.$m_commingsoon.'-01">></td></tr>';
+	$calendar.= '<tr class="calendar-row"><td class="calendar-day-head">'.implode('</td><td class="calendar-day-head">',$headings).'</td></tr>';
+
+	/* days and weeks vars now ... */
+	$running_day = date('w',mktime(0,0,0,$month,1,$year));
+	$days_in_month = date('t',mktime(0,0,0,$month,1,$year));
+	$days_in_this_week = 1;
+	$day_counter = 0;
+	$dates_array = array();
+
+	/* row for week one */
+	$calendar.= '<tr class="calendar-row">';
+
+	/* print "blank" days until the first of the current week */
+	for($x = 0; $x < $running_day; $x++):
+		$calendar.= '<td class="calendar-day-np"> </td>';
+		$days_in_this_week++;
+	endfor;
+
+	/* keep going with days.... */
+	for($list_day = 1; $list_day <= $days_in_month; $list_day++):
+		$zero = (10 > $list_day) ? '0' : '';
+		$calendar.= '<td class="calendar-day" onclick=document.location="data.php?f='.$year.'-'.$month.'-'.$zero.$list_day.'">';
+			/* add in the day number */
+			$calendar.= '<div class="day-number">'.$list_day.'</div>';
+
+			/** QUERY THE DATABASE FOR AN ENTRY FOR THIS DAY !!  IF MATCHES FOUND, PRINT THEM !! **/
+			$calendar.= str_repeat('<p> </p>',2);
+			
+		$calendar.= '</td>';
+		if($running_day == 6):
+			$calendar.= '</tr>';
+			if(($day_counter+1) != $days_in_month):
+				$calendar.= '<tr class="calendar-row">';
+			endif;
+			$running_day = -1;
+			$days_in_this_week = 0;
+		endif;
+		$days_in_this_week++; $running_day++; $day_counter++;
+	endfor;
+
+	/* finish the rest of the days in the week */
+	if($days_in_this_week < 8 and $days_in_this_week > 1):
+		for($x = 1; $x <= (8 - $days_in_this_week); $x++):
+			$calendar.='<td class="calendar-day-np"> </td>';
+		endfor;
+	endif;
+
+	/* final row */
+	$calendar.= '</tr>';
+
+	/* end the table */
+	$calendar.= '</table>';
+	
+	/* all done, return result */
+	return $calendar;
+}
+
+/* draws a calendar */
+function draw_calendar_pvd($month,$year){
+
+	/* draw table */
+	$months = array('Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Sept.','Octubre','Nov.','Dic.');
+	$calendar= '<table cellpadding="0" cellspacing="0" class="calendar">';
+
+	/* table headings */
+	$m_previously = (11 > $month && 1 < $month) ? '0' : '';
+	$m_previously .= (1 == $month) ? '12' : ($month - 1);
+	$y_previously = (1 == $month) ? ($year - 1) : $year;
+
+	$m_commingsoon = (9 > $month || 12 == $month) ? '0' : '';
+	$m_commingsoon .= (12 == $month) ? '1' : ($month + 1);
+	$y_commingsoon = (12 == $month) ? ($year + 1) : $year;
+ 
+	$headings = array('D','L','M','X','J','V','S');
+	$calendar.= '<tr class="calendar-row"><td class="calendar-day-head" onclick=document.location="pvd.php?f='.$y_previously.'-'.$m_previously.'-01"><</td><td class="calendar-day-head" colspan="5">'.$months[$month-1].' '.$year.'</td><td class="calendar-day-head" onclick=document.location="pvd.php?f='.$y_commingsoon.'-'.$m_commingsoon.'-01">></td></tr>';
+	$calendar.= '<tr class="calendar-row"><td class="calendar-day-head">'.implode('</td><td class="calendar-day-head">',$headings).'</td></tr>';
+
+	/* days and weeks vars now ... */
+	$running_day = date('w',mktime(0,0,0,$month,1,$year));
+	$days_in_month = date('t',mktime(0,0,0,$month,1,$year));
+	$days_in_this_week = 1;
+	$day_counter = 0;
+	$dates_array = array();
+
+	/* row for week one */
+	$calendar.= '<tr class="calendar-row">';
+
+	/* print "blank" days until the first of the current week */
+	for($x = 0; $x < $running_day; $x++):
+		$calendar.= '<td class="calendar-day-np"> </td>';
+		$days_in_this_week++;
+	endfor;
+
+	/* keep going with days.... */
+	for($list_day = 1; $list_day <= $days_in_month; $list_day++):
+		$zero = (10 > $list_day) ? '0' : '';
+		$calendar.= '<td class="calendar-day" onclick=document.location="pvd.php?f='.$year.'-'.$month.'-'.$zero.$list_day.'">';
+			/* add in the day number */
+			$calendar.= '<div class="day-number">'.$list_day.'</div>';
+
+			/** QUERY THE DATABASE FOR AN ENTRY FOR THIS DAY !!  IF MATCHES FOUND, PRINT THEM !! **/
+			$calendar.= str_repeat('<p> </p>',2);
+			
+		$calendar.= '</td>';
+		if($running_day == 6):
+			$calendar.= '</tr>';
+			if(($day_counter+1) != $days_in_month):
+				$calendar.= '<tr class="calendar-row">';
+			endif;
+			$running_day = -1;
+			$days_in_this_week = 0;
+		endif;
+		$days_in_this_week++; $running_day++; $day_counter++;
+	endfor;
+
+	/* finish the rest of the days in the week */
+	if($days_in_this_week < 8 and $days_in_this_week > 1):
+		for($x = 1; $x <= (8 - $days_in_this_week); $x++):
+			$calendar.='<td class="calendar-day-np"> </td>';
+		endfor;
+	endif;
+
+	/* final row */
+	$calendar.= '</tr>';
+
+	/* end the table */
+	$calendar.= '</table>';
+	
+	/* all done, return result */
+	return $calendar;
+}
+
+
+
+?>

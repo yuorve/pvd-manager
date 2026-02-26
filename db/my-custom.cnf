@@ -1,0 +1,25 @@
+[mysqld]
+# EL MÁS IMPORTANTE PARA MYSQL 8: Desactiva el sistema de métricas pesado
+performance_schema = OFF
+
+# Desactiva el Binary Log si no usas replicación. Ahorra disco y carga CPU.
+skip-log-bin
+
+# Limita la memoria para datos (25% de tu RAM total)
+innodb_buffer_pool_size = 256M
+
+# Evita que MySQL cree archivos de log gigantes que consumen RAM y disco
+innodb_log_file_size = 48M
+innodb_log_buffer_size = 8M
+
+# Reduce la memoria por cada hilo de conexión
+sort_buffer_size = 256K
+read_buffer_size = 256K
+join_buffer_size = 256K
+
+# Limita el número de conexiones para que el servidor no explote con tráfico
+max_connections = 40
+
+# Reduce el uso de tablas temporales en RAM
+tmp_table_size = 16M
+max_heap_table_size = 16M

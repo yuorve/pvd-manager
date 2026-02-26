@@ -1,0 +1,25 @@
+services:
+  api:
+    # Elimina el volumen para usar el código copiado en el Dockerfile
+    volumes: []
+    restart: always
+
+  web:
+    # En producción no se necesita el contenedor de Node/Vite
+    # Escalamos a 0 para que no consuma recursos
+    deploy:
+      replicas: 0
+
+  db:
+    restart: always
+
+  adminer:
+    # Opcional: puedes comentar este servicio o ponerle seguridad extra
+    restart: always
+
+  nginx:
+    restart: always
+    volumes:
+      - ./nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+      # Mapea la carpeta dist (generada por npm run build) al root de Nginx
+      - ./frontend/dist:/usr/share/nginx/html:ro
