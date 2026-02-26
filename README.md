@@ -1,101 +1,101 @@
 # PVD Manager - Dashboard v2.0
 
-**PVD Manager** es un sistema de monitoreo en tiempo real diseñado para gestionar y visualizar el estado de las estaciones de trabajo y las asignaciones de PVD (Pausas por Visualización de Datos) de los usuarios. Proporciona un panel de control completo para supervisores y agentes, asegurando el cumplimiento de los tiempos de descanso y optimizando la distribución de la actividad.
+**PVD Manager** is a real-time monitoring system designed to manage and visualize the status of workstations and user PVD (Data Visualization Pauses) assignments. It provides a comprehensive dashboard for supervisors and agents, ensuring compliance with break times and optimizing activity distribution.
 
-## Características Principales
+## Key Features
 
-* **Monitoreo en Tiempo Real**: Visualiza el estado de todas las estaciones de trabajo (Activo, PVD, Descanso, Formación, Gerencia, Suplencia) en vivo.
-* **Gestión de PVD**: Control de tiempos con soporte para temporizadores en cuenta regresiva y alertas visuales/sonoras.
-* **Alertas Sonoras y Visuales**: Notificaciones críticas automáticas cuando los tiempos de límite de descanso o actividad son alcanzados (vía audio `.mp3`).
-* **Panel de Supervisor**: Herramientas exclusivas para el rol de supervisor, incluyendo:
-  * Historial de Actividad (Activity Log).
-  * Gestión de Usuarios.
-  * Gestión de Estaciones.
-  * Asignaciones de horarios de PVD.
-* **Interfaz de TV (Modo Pantalla)**: Vista especial optimizada para monitores o televisores de sala sin requerimiento de login (`/tv`).
-* **Soporte para Tema Oscuro**: Transición y persistencia de UI clara/oscura para mejor ergonomía visual.
+* **Real-Time Monitoring**: View the status of all workstations (Active, PVD, Break, Training, Management, Substitution) live.
+* **PVD Management**: Time control with support for countdown timers and visual/audio alerts.
+* **Audio and Visual Alerts**: Automatic critical notifications when break or activity time limits are reached (via `.mp3` audio).
+* **Supervisor Dashboard**: Exclusive tools for the supervisor role, including:
+  * Activity Log.
+  * User Management.
+  * Workstation Management.
+  * PVD Schedule Assignments.
+* **TV Interface (Screen Mode)**: Special view optimized for room monitors or TVs with no login required (`/tv`).
+* **Dark Theme Support**: Transition and persistence of light/dark UI for better visual ergonomics.
 
-## Tecnologías Utilizadas
+## Technologies Used
 
 ### Frontend
-* **[React 18](https://reactjs.org/)**: Librería para construir la interfaz de usuario.
-* **[Vite](https://vitejs.dev/)**: Entorno de desarrollo rápido y optimizado para la web moderna.
-* **[Tailwind CSS](https://tailwindcss.com/)**: Framework CSS de utilidad para diseño rápido y responsivo.
-* **Axios**: Cliente HTTP para las peticiones a la API.
+* **[React 18](https://reactjs.org/)**: Library for building the user interface.
+* **[Vite](https://vitejs.dev/)**: Fast and optimized development environment for the modern web.
+* **[Tailwind CSS](https://tailwindcss.com/)**: Utility-first CSS framework for rapid and responsive design.
+* **Axios**: HTTP client for API requests.
 
 ### Backend
-* **[Node.js](https://nodejs.org/) + [Express](https://expressjs.com/)**: Servidor API RESTful rápido y minismalista.
-* **[MySQL 8.0](https://www.mysql.com/)**: Base de datos relacional para guardar historial y métricas.
-* **JWT (JSON Web Tokens)**: Sistema de autenticación seguro basado en tokens.
-* **Bcrypt.js**: Encriptación de contraseñas de usuarios.
+* **[Node.js](https://nodejs.org/) + [Express](https://expressjs.com/)**: Fast and minimalist RESTful API server.
+* **[MySQL 8.0](https://www.mysql.com/)**: Relational database to save history and metrics.
+* **JWT (JSON Web Tokens)**: Secure token-based authentication system.
+* **Bcrypt.js**: User password encryption.
 
-### Infraestructura / Despliegue
-* **[Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)**: Contenerización de servicios (API, Web Frontend, Base de Datos, Nginx Proxy y Adminer).
-* **Nginx**: Proxy inverso para unificar el puerto 80 hacia el Frontend y la API de manera transparente.
+### Infrastructure / Deployment
+* **[Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)**: Containerization of services (API, Web Frontend, Database, Nginx Proxy, and Adminer).
+* **Nginx**: Reverse proxy to unify port 80 to the Frontend and API transparently.
 
-## Estructura del Proyecto
+## Project Structure
 
 ```
 pvd/
-├── frontend/       # Código fuente del cliente en React + Vite + Tailwind CSS
-├── server/         # Código fuente de la API backend en Node.js + Express
-├── db/             # Scripts de base de datos e inicializaciones (init.sql)
-├── nginx/          # Archivos de configuración de Nginx (default.conf)
-├── docker-compose.yml # Composición de servicios Docker para desarrollo/producción
-└── README.md       # Este documento
+├── frontend/       # React + Vite + Tailwind CSS client source code
+├── server/         # Node.js + Express backend API source code
+├── db/             # Database initialization scripts (init.sql)
+├── nginx/          # Nginx configuration files (default.conf)
+├── docker-compose.yml # Docker services composition for development/production
+└── README.md       # This document
 ```
 
-## Instalación y Configuración (Docker)
+## Installation and Setup (Docker)
 
-La forma más sencilla de ejecutar esta aplicación es utilizando Docker Compose.
+The easiest way to run this application is using Docker Compose.
 
-1. **Clonar el proyecto:**
+1. **Clone the project:**
    ```bash
-   git clone <url-del-repositorio>
+   git clone <repository-url>
    cd pvd
    ```
 
-2. **Configurar las Variables de Entorno:**
-   Asegúrate de configurar o revisar el archivo `.env` en la raíz del proyecto para la configuración general y en la carpeta `./frontend` o `./server` si tuvieran variables específicas. Las principales variables que usa Docker son:
+2. **Configure Environment Variables:**
+   Make sure to configure or review the `.env` file in the project root for general configuration, and in the `./frontend` or `./server` folder if they have specific variables. The main variables used by Docker are:
    * `DB_NAME`
    * `DB_USER`
    * `DB_PASS`
    * `DB_ROOT_PASSWORD`
    * `PORT_ADMINER`
 
-3. **Construir y Levantar los Contenedores:**
-   Ejecuta el siguiente comando para generar las imágenes locales y encender todos los contenedores en segundo plano:
+3. **Build and Run the Containers:**
+   Run the following command to build the local images and start all containers in the background:
    ```bash
    docker-compose up -d --build
    ```
 
-4. **Acceso a la Aplicación:**
-   * **Dashboard y Aplicación (Frontend + API router)**: [http://localhost](http://localhost)
-   * **Base de datos (Adminer)**: `http://localhost:<PORT_ADMINER>`
+4. **Access the Application:**
+   * **Dashboard and Application (Frontend + API router)**: [http://localhost](http://localhost)
+   * **Database (Adminer)**: `http://localhost:<PORT_ADMINER>`
 
-## Desarrollo Local (Sin Docker)
+## Local Development (Without Docker)
 
-Si deseas mantener en ejecución la Base de Datos en un contenedor pero levantar Frontend y Backend de manera local y aislada de Docker:
+If you want to keep the Database running in a container but start the Frontend and Backend locally and isolated from Docker:
 
-1. Levanta la Base de datos:
+1. Start the Database:
    ```bash
    docker-compose up -d db
    ```
-2. Instala dependencias y corre el Backend:
+2. Install dependencies and run the Backend:
    ```bash
    cd server
    npm install
    npm run dev
    ```
-3. Instala dependencias y levanta el Frontend:
+3. Install dependencies and start the Frontend:
    ```bash
    cd frontend
    npm install
    npm run dev
    ```
 
-## Licencia
+## License
 Copyright (c) 2026 Yury Leonardo Oropeza Veracierto
-Todos los derechos reservados.
-La reproducción, distribución, modificación o uso de este software o cualquier parte del mismo, sin la autorización previa y por escrito del propietario de los derechos de autor, queda estrictamente prohibida.
-ESTE SOFTWARE SE PROPORCIONA "TAL CUAL", SIN GARANTÍA DE NINGÚN TIPO, EXPRESA O IMPLÍCITA.
+All rights reserved.
+The reproduction, distribution, modification or use of this software or any part of it, without the prior written authorization of the copyright owner, is strictly prohibited.
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
